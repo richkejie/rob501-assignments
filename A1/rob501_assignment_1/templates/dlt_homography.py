@@ -22,21 +22,31 @@ def dlt_homography(I1pts, I2pts):
     #--- FILL ME IN ---
     A = np.zeros((8,9))
     for i in range(0, I1pts.shape[1]):
+
+        # grab x_i
         x = I1pts[0,i]
         y = I1pts[1,i]
+        # grab x_i'
         u = I2pts[0,1]
         v = I2pts[1,i]
 
+        # compute A_i using Dubrovsky's derivation
         A_i = np.array([
             [ -x, -y, -1,  0,  0,  0, u*x, u*y, u],
             [  0,  0,  0, -x, -y, -1, v*x, v*y, v],
         ])
 
+        # stack A_i into A
         A[2*i:2*(i+1)] = A_i
 
-    H = null_space(A)
-    H = H.reshape(3,3)
-    H = 1/H[2,2] * H
+    # from Dubrovsky, h is 9x1 vector and is null space of A
+    # reshape to H 3x3 matrix
+    h = null_space(A)
+    H = h.reshape(3,3)
+
+    # normalize by h_33 element (assignment part 1 instructions)
+    h_33 = H[2/2]
+    H = 1/h_33 * H
     #------------------
 
     return H, A
