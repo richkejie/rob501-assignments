@@ -28,6 +28,58 @@ def bilinear_interp(I, pt):
     if pt.shape != (2, 1):
         raise ValueError('Point size is incorrect.')
 
+    Px = pt[0]
+    Py = pt[1]
+
+    # get 4 points (x,y) pixel coords from I
+    x_1 = int(np.floor(Px))
+    if (x_1 - Px) == 0: # Px int
+        x_1 -= 1
+
+    x_2 = int(x_1 + 1)
+
+    y_1 = int(np.floor(Py))
+    if (y_1- Py) == 0: # Py int
+        y_1 -= 1
+
+    y_2 = int(y_1 + 1)
+
+    # 4 points are:
+    # Q11(x_1, y_1)
+    # Q12(x_1, y_2)
+    # Q21(x_2, y_1)
+    # Q22(x_2, y_2)
+    # get intensities at these 4 points:
+    # note: I is y by x (since y represents the rows)
+    I_Q11 = I[y_1][x_1]
+    I_Q12 = I[y_2][x_1]
+    I_Q21 = I[y_1][x_2]
+    I_Q22 = I[y_2][x_2]
+
+    # get multilinear polynomial system
+    # derived from Wikipedia: https://en.wikipedia.org/wiki/Bilinear_interpolation
+    M = np.array(
+        [1, x_1, y_1, x_1*y_1],
+        [1, x_1, y_2, x_1*y_2],
+        [1, x_2, y_1, x_2*y_1],
+        [1, x_2, y_2, x_2*y_2],
+    )
+    fI = np.array([
+        I_Q11,
+        I_Q12,
+        I_Q21,
+        I_Q22,
+    ])
+    A = np.matmul(inv(M), fI) # solve matrix linear equation
+
+    # calculate b from elements of A
+    a_1 = A[0]
+    a_2 = A[1]
+    a_3 = A[2]
+    a_4 = A[3]
+    res = a_1 + a_2*Px + a_3*Py + a_4*Px*Py
+    b = int(round(res[0])) # intensity in uint8
+
     #------------------
 
     return b
