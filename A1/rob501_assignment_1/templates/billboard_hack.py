@@ -1,5 +1,6 @@
 # Billboard hack script file.
 import numpy as np
+# import matplotlib.pyplot as plt
 from matplotlib.path import Path
 from imageio import imread, imwrite
 
@@ -34,14 +35,40 @@ def billboard_hack():
     #--- FILL ME IN ---
 
     # Let's do the histogram equalization first.
+    st_histeq = histogram_eq(Ist) # hist equalized soldiers tower image
 
     # Compute the perspective homography we need...
+    H, A = dlt_homography(Iyd_pts, Ist_pts)
 
     # Main 'for' loop to do the warp and insertion - 
     # this could be vectorized to be faster if needed!
 
     # You may wish to make use of the contains_points() method
     # available in the matplotlib.path.Path class!
+    billboard_yd = Path(Iyd_pts.T)
+    bbox_x_min = np.min(bbox[0])
+    bbox_x_max = np.max(bbox[0])
+    bbox_y_min = np.min(bbox[1])
+    bbox_y_max = np.max(bbox[1])
+    for x in range(bbox_x_min, bbox_x_max+1):
+        for y in range(bbox_y_min, bbox_y_max+1):
+            
+            if billboard_yd.contains_points(np.array([[x,y]])):
+                # print(f"point: ({x},{y})")
+                # apply homography
+                P_yd = np.array([x,y,1])
+                P_st = np.matmul(H, P_yd)
+                P_st = P_st/P_st[-1] # normalize by last element
+                # print(f"P_st = \n{P_st}")
+
+                # apply bilinear interp of histogram equalized img
+                P_st_pt = P_st[:-1].reshape((2,1))
+                # print(f"P_st_pt = \n{P_st_pt}")
+
+                i_val = bilinear_interp(st_histeq, P_st_pt)
+                Ihack[y,x] = np.array([i_val, i_val, i_val]) # rgb values
+            else:
+                continue
 
     #------------------
 
@@ -50,3 +77,5 @@ def billboard_hack():
     # imwrite(Ihack, 'billboard_hacked.png');
 
     return Ihack
+
+# billboard_hack()
