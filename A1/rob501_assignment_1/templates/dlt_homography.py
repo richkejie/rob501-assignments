@@ -20,8 +20,9 @@ def dlt_homography(I1pts, I2pts):
     A  - 8x9 np.array of DLT matrix used to determine homography.
     """
     #--- FILL ME IN ---
+    num_points = I1pts.shape[1]
     A = np.zeros((8,9))
-    for i in range(0, I1pts.shape[1]):
+    for i in range(0, num_points):
 
         # grab x_i
         x = I1pts[0,i]
@@ -42,6 +43,8 @@ def dlt_homography(I1pts, I2pts):
     # from Dubrovsky, h is 9x1 vector and is null space of A
     # reshape to H 3x3 matrix
     h = null_space(A)
+    # take second? basis vector of null space
+    h = h.T[1]
     H = h.reshape(3,3)
 
     # normalize by h_33 element (assignment part 1 instructions)
