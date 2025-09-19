@@ -58,12 +58,12 @@ def bilinear_interp(I, pt):
 
     # get multilinear polynomial system
     # derived from Wikipedia: https://en.wikipedia.org/wiki/Bilinear_interpolation
-    M = np.array(
+    M = np.array([
         [1, x_1, y_1, x_1*y_1],
         [1, x_1, y_2, x_1*y_2],
         [1, x_2, y_1, x_2*y_1],
         [1, x_2, y_2, x_2*y_2],
-    )
+    ])
     fI = np.array([
         I_Q11,
         I_Q12,
