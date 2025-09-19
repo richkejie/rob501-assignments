@@ -42,7 +42,6 @@ def histogram_eq(I):
     c = np.round(255*CDF)
     # cast to uint8 for intensity
     c = c.astype('uint8')
-
     # f(i) = c(i)
     # pixel i of new img J will have intensity of c[img[i]]
     for i in range(N):
