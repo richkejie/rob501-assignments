@@ -54,16 +54,13 @@ def billboard_hack():
         for y in range(bbox_y_min, bbox_y_max+1):
             
             if billboard_yd.contains_points(np.array([[x,y]])):
-                # print(f"point: ({x},{y})")
                 # apply homography
                 P_yd = np.array([x,y,1])
                 P_st = np.matmul(H, P_yd)
                 P_st = P_st/P_st[-1] # normalize by last element
-                # print(f"P_st = \n{P_st}")
 
                 # apply bilinear interp of histogram equalized img
                 P_st_pt = P_st[:-1].reshape((2,1))
-                # print(f"P_st_pt = \n{P_st_pt}")
 
                 i_val = bilinear_interp(st_histeq, P_st_pt)
                 Ihack[y,x] = np.array([i_val, i_val, i_val]) # rgb values
@@ -74,7 +71,7 @@ def billboard_hack():
 
     # plt.imshow(Ihack)
     # plt.show()
-    # imwrite(Ihack, 'billboard_hacked.png');
+    # imwrite(Ihack, 'billboard_hacked.png')
 
     return Ihack
 
