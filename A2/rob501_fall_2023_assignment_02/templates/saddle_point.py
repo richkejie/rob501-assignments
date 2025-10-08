@@ -25,6 +25,47 @@ def saddle_point(I):
  
     # Code goes here.
 
+    # solve for ALPHA, BETA, GAMMA, DELTA, EPSILON, ZETA
+    # from (4) of Lucchese using linear least squares
+    # then find intersection of lines using matrix formulation
+    # also from Lucchese
+
+    # dimensions
+    M, N = I.shape
+
+    # coefficients matrix
+    A = np.empty((M*N, 6))
+    # target Intensity values vector
+    b = np.empty((M*N,1))
+
+    # setup A and b according to (4) for all points in I
+    i = 0
+    for y in range(0,M):
+        for x in range(0,N):
+            A[i,:] = [x*x, x*y, y*y, x, y, 1]
+            b[i] = I[y,x]
+            i += 1
+
+    # solve lstsq for parameters
+    ALPHA, BETA, GAMMA, DELTA, EPSILON, ZETA = lstsq(A, b, rcond=None)[0].T[0]
+
+    def intersection(ALPHA, BETA, GAMMA, DELTA, EPSILON, ZETA):
+
+        M = np.array([
+            [ 2*ALPHA,   BETA    ],
+            [ BETA,      2*GAMMA ],
+        ])
+        x = np.array([
+            [DELTA],
+            [EPSILON],
+        ])
+        pt = -np.matmul(inv(M),x)
+
+        return pt
+    
+    # find intersection
+    pt = intersection(ALPHA, BETA, GAMMA, DELTA, EPSILON, ZETA)
+
     #------------------
 
     correct = isinstance(pt, np.ndarray) and \
