@@ -113,9 +113,6 @@ def find_jacobian(K, Twc, Wpt):
     Cwc = Twc[:3,:3]
     t = Twc[:3,3].reshape((3,1))
 
-    # get Wpt wrt camera frame
-    pt_C = Cwc.T @ (Wpt - t)
-
     # euler angles from rotation matrix
     r, p, y = rpy_from_dcm(Cwc).reshape(3).astype(float)
 
