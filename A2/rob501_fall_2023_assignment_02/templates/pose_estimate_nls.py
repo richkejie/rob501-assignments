@@ -56,6 +56,21 @@ def pose_estimate_nls(K, Twc_guess, Ipts, Wpts):
 
     # 1. Convert initial guess to parameter vector (6 x 1).
     # ...
+    # set Twc to initial guess
+    Twc = Twc_guess
+    # extract parameters
+    C = Twc[:3,:3]
+    t = Twc[:3,3]
+    tx,ty,tz = t.reshape(3)
+    r,p,y = rpy_from_dcm(C).reshape(3).astype(float)
+    params = np.array([
+        [tx],
+        [ty],
+        [tz],
+        [r],
+        [p],
+        [y],
+    ])
 
     iter = 1
 
@@ -63,13 +78,30 @@ def pose_estimate_nls(K, Twc_guess, Ipts, Wpts):
     while True:
         # 3. Save previous best pose estimate.
         # ...
+        params_prev = params
 
         # 4. Project each landmark into image, given current pose estimate.
+        # error function to be minimized: e = KC.T(p_w-t) - p_C
+        C = dcm_from_rpy(params[3:].reshape((3,1)))
+        t = params[:3].reshape((3,))
         for i in np.arange(tp):
-            pass
+            Wpt = Wpts[:,i]
+            # get residual
+            x = K @ C.T @ (Wpt - t)
+            x /= x[2] # normalize by z-element
+            x = x[:2].reshape((2,1))
+            Ipt = Ipts[:,i].reshape((2,1))
+            e_i = x - Ipt
+            dY[i:i+2,:] = e_i
+            
+            # get Jacobian
+            J_i = find_jacobian(K,Twc,Wpt.reshape((3,1)))
+            J[i:i+2,:] = J_i
 
         # 5. Solve system of normal equations for this iteration.
         # ...
+        dx = -inv(J.T @ J) @ J.T @ dY
+        params += dx
 
         # 6. Check - converged?
         diff = norm(params - params_prev)
@@ -84,6 +116,7 @@ def pose_estimate_nls(K, Twc_guess, Ipts, Wpts):
         iter += 1
 
     # 7. Compute and return homogeneous pose matrix Twc.
+    Twc = hpose_from_epose(params)
 
     #------------------
 
