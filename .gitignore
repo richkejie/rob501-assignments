@@ -1,2 +1,8 @@
 .DS_store
 __pycache__
+*bin*
+*lib*
+*share*
+pyvenv.cfg
+handin.tar
+*submission*
