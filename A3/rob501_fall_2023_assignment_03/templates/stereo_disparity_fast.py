@@ -38,6 +38,52 @@ def stereo_disparity_fast(Il, Ir, bbox, maxd):
 
     # Code goes here...
 
+    Id = np.empty(Il.shape)
+
+    # window (arbitrary, can be tuned)
+    window = 15
+    half_window = window//2
+
+    SAD_vals = np.empty((1,2*maxd))
+    disparity_vals = np.empty((1,2*maxd))
+
+    # pad stereo images
+    Il_padded = np.pad(Il, half_window, mode='edge')
+    Ir_padded = np.pad(Ir, half_window, mode='edge')
+
+    image_width = Il_padded.shape[1]
+
+    # get bounding box limits
+    xmin = bbox[0,0]
+    xmax = bbox[0,1] + 1
+    ymin = bbox[1,0]
+    ymax = bbox[1,1] + 1
+
+    for y in range(ymin, ymax):
+        for x in range(xmin, xmax):
+            left_patch = Il_padded[y:y+window,x:x+window]
+
+            # find max disparity
+            i = 0
+            for d in range(-maxd, maxd):
+                disparity_middle = x+d+half_window
+                right_x_bound = image_width - half_window
+                left_x_bound = half_window - 1
+                if disparity_middle < right_x_bound and disparity_middle > left_x_bound:
+                    right_patch = Ir_padded[y:y+window,x+d:x+d+window]
+
+                    SAD_vals[0,i] = np.sum(np.abs(left_patch - right_patch))
+                else: # out of bounds
+                    SAD_vals[0,i] = -np.inf
+
+                disparity_vals[0,i] = abs(d)
+                i += 1
+            
+            SAD = SAD_vals[0]
+            SAD[SAD<0] = np.amax(SAD) # set negative vals to max (basically don't want to worry about those)
+            best = np.argmin(SAD)
+            Id[y,x] = disparity_vals[0,best]
+
     #------------------
 
     correct = isinstance(Id, np.ndarray) and Id.shape == Il.shape
