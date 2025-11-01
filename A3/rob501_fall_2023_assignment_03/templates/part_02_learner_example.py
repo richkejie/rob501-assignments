@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from imageio import imread
+from imageio.v2 import imread
 from stereo_disparity_score import stereo_disparity_score
 from stereo_disparity_best import stereo_disparity_best
 

@@ -52,66 +52,72 @@ def stereo_disparity_best(Il, Ir, bbox, maxd):
 
     I make the following changes/simplifications:
     - use SAD instead of SSD (for faster computation)
-    - LoG filter tuned for optimization
+    - LoG filter tuned for optimization (use a discrete approximation)
+    - apply further filtering to smooth disparity map
 
     """
 
     Id = np.empty(Il.shape)
 
-    window = 11
+    # window size can be tuned
+    window = 10
     half_window = window//2
 
-    SAD_vals = []
-
-    # apply LoG filtering
+    # apply LoG filtering (discrete approx)
     # hardcode filter (can be tuned):
-    filter = np.array([
-        [-1,  -1, -1],
-        [-1, 9.5, -1],
-        [-1,  -1, -1]
+    LoG_filter = np.array([
+        [-1, -1, -1, -1, -1],
+        [-1,  1,  1,  1, -1],
+        [-1,  1, 12,  1, -1],
+        [-1,  1,  1,  1, -1],
+        [-1, -1, -1, -1, -1]
     ])
 
     # convolve() from scipy.ndimage.filters
-    Il = convolve(Il, filter, mode='nearest')
-    Ir = convolve(Ir, filter, mode='nearest')
+    Il = convolve(Il, LoG_filter, mode='nearest')
+    Ir = convolve(Ir, LoG_filter, mode='nearest')
 
     # pad images:
     Il_padded = np.pad(Il, maxd, mode='edge')
-    Ir_padded = np.pad(Il, maxd, mode='edge')
-
-    image_width = Il_padded.shape[1]
+    Ir_padded = np.pad(Ir, maxd, mode='edge')
 
     # get bounding box limits
-    xmin = bbox[0,0]
-    xmax = bbox[0,1] + 1
-    ymin = bbox[1,0]
-    ymax = bbox[1,1] + 1
+    x_min = bbox[0,0]
+    x_max = bbox[0,1] + 1
+    y_min = bbox[1,0]
+    y_max = bbox[1,1] + 1
 
-    # check possible disparities (faster computation)
+    # check possible disparities (faster computation):
+    # steps:
+    #   1) for each disparity from 0 - maxd, get one patch from left and right imgs
+    #           pick patch at maxd, with x varying with disparity being checked
+    #           (patch doesn't really matter as long as its within bbox)
+    #   2) compute SAD
+    #   3) get min SAD to get best disparities
+    SAD_vals = []
     ones_filter = np.ones((half_window, half_window)) # used to sum abs_diffs through convolution
     for d in range(0, maxd+1):
-        left_img = Il_padded[ymin+maxd:ymax+maxd,xmin+maxd:xmax+maxd]
-        right_img = Ir_padded[ymin+maxd:ymax+maxd,xmin+maxd-d:xmax+maxd-d]
-        assert(left_img.shape == right_img.shape)
-        abs_diff = np.abs(left_img - right_img)
+        left_patch = Il_padded[y_min+maxd:y_max+maxd,x_min+maxd:x_max+maxd]
+        right_patch = Ir_padded[y_min+maxd:y_max+maxd,x_min+maxd-d:x_max+maxd-d]
+        assert(left_patch.shape == right_patch.shape)
+        abs_diff = np.abs(left_patch - right_patch)
         SAD = convolve(abs_diff,ones_filter,mode='mirror')
         SAD_vals.append(SAD)
 
-    SAD_vals = np.stack(SAD_vals, axis=2)
-    disparities = np.argmin(SAD_vals, axis=2)
-    Id[ymin:ymax,xmin:xmax] = disparities
+    # get min SADs to get best disparities
+    disparities = np.argmin(np.stack(SAD_vals, axis=2), axis=2)
+    Id[y_min:y_max,x_min:x_max] = disparities
 
     # apply additional filter for disparity smoothing (can be tuned)
+    # smoothing reduces E_rms
     # apply only to px within bbox
     # filter from scipy.ndimage.filters
-    bbox_disparities = Id[ymin:ymax,xmin:xmax]
+    bbox_disparities = Id[y_min:y_max,x_min:x_max]
+    # median filter removes noise
     bbox_disparities = median_filter(
-        bbox_disparities, size=13, mode='nearest'
+        bbox_disparities,size=18,mode='nearest'
     )
-    bbox_disparities = percentile_filter(
-        bbox_disparities, percentile=55, size=4, mode='nearest'
-    )
-    Id[ymin:ymax,xmin:xmax] = bbox_disparities
+    Id[y_min:y_max,x_min:x_max] = bbox_disparities
 
     #------------------
 

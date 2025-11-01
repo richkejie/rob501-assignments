@@ -54,13 +54,19 @@ def stereo_disparity_fast(Il, Ir, bbox, maxd):
     image_width = Il_padded.shape[1]
 
     # get bounding box limits
-    xmin = bbox[0,0]
-    xmax = bbox[0,1] + 1
-    ymin = bbox[1,0]
-    ymax = bbox[1,1] + 1
+    x_min = bbox[0,0]
+    x_max = bbox[0,1] + 1
+    y_min = bbox[1,0]
+    y_max = bbox[1,1] + 1
 
-    for y in range(ymin, ymax):
-        for x in range(xmin, xmax):
+    # find best disparities
+    # steps:
+    #   1) go through each px and get patch around that px of size window
+    #   2) for each disparity up to maxd, find corresponding patch in other img
+    #   3) compute SAD
+    #   4) get min SAD to get best disparities
+    for y in range(y_min, y_max):
+        for x in range(x_min, x_max):
             left_patch = Il_padded[y:y+window,x:x+window]
 
             # find max disparity
@@ -71,7 +77,6 @@ def stereo_disparity_fast(Il, Ir, bbox, maxd):
                 left_x_bound = half_window - 1
                 if disparity_middle < right_x_bound and disparity_middle > left_x_bound:
                     right_patch = Ir_padded[y:y+window,x+d:x+d+window]
-
                     SAD_vals[0,i] = np.sum(np.abs(left_patch - right_patch))
                 else: # out of bounds
                     SAD_vals[0,i] = -np.inf
@@ -82,7 +87,7 @@ def stereo_disparity_fast(Il, Ir, bbox, maxd):
             SAD = SAD_vals[0]
             SAD[SAD<0] = np.amax(SAD) # set negative vals to max (basically don't want to worry about those)
             best = np.argmin(SAD)
-            Id[y,x] = disparity_vals[0,best]
+            Id[y,x] = disparity_vals[0,best] # use min SADs to get best disparities
 
     #------------------
 
