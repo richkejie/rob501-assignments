@@ -90,6 +90,12 @@ def main(dump_dir, do_depth):
     with open(f"{dump_dir}/best_gain.txt", 'w') as f:
         f.write(f"Best gain: {best_gain}\nConvergence time: {best_time}s\n")
 
+    # save data
+    with open(f"{dump_dir}/data.csv", 'w') as f:
+        f.write("gain,time\n")
+        for i in range(len(gain_range)):
+            f.write(f"{gain_range[i]},{delta_t[i]}\n")
+
 print("Running simulations for estimated depths...")
 main(est_depths_dir, do_depth=True)
 print("\n\n")
