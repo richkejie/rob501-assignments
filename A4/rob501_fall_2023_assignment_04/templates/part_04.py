@@ -9,6 +9,11 @@ import matplotlib.pyplot as plt
 import os
 import shutil
 
+# for emailing
+import smtplib
+from email.message import EmailMessage
+import os
+
 # Camera intrinsics matrix - known.
 K = np.array([[500.0, 0, 400.0], 
               [0, 500.0, 300.0], 
@@ -67,7 +72,7 @@ gain_range = np.linspace(start=start,stop=stop,num=num)
 
 print(f"\n\nTesting gains from {start} to {stop}, at intervals of {interval}.\n\n")
 
-def main(dump_dir, do_depth):
+def main(dump_dir, do_depth, title, file_prefix):
     delta_t = np.zeros(len(gain_range))
     for i,gain in enumerate(gain_range):
         sim_start = time.time()
@@ -80,27 +85,90 @@ def main(dump_dir, do_depth):
     plt.plot(gain_range,delta_t)
     plt.xlabel("Gain")
     plt.ylabel("Simulation Time (s)")
-    plt.title("Simulation Convergence Time vs Gain - Estimated Depths")
-    plt.savefig(f"{dump_dir}/ibvs_gain_v_time_plot.png")
+    plt.title(title)
+    plt.savefig(f"{dump_dir}/{file_prefix}_ibvs_gain_v_time_plot.png")
 
     # find min time ---> best gain
     min_i = np.argmin(delta_t)
     best_time = delta_t[min_i]
     best_gain = gain_range[min_i]
-    with open(f"{dump_dir}/best_gain.txt", 'w') as f:
+    with open(f"{dump_dir}/{file_prefix}_best_gain.txt", 'w') as f:
         f.write(f"Best gain: {best_gain}\nConvergence time: {best_time}s\n")
 
     # save data
-    with open(f"{dump_dir}/data.csv", 'w') as f:
+    with open(f"{dump_dir}/{file_prefix}_data.csv", 'w') as f:
         f.write("gain,time\n")
         for i in range(len(gain_range)):
             f.write(f"{gain_range[i]},{delta_t[i]}\n")
 
 print("Running simulations for estimated depths...")
-main(est_depths_dir, do_depth=True)
+main(est_depths_dir, do_depth=True,
+     title="Simulation Convergence Time vs Gain - Estimated Depths",
+     file_prefix="est")
 print("\n\n")
 
 print("Running simulations for true depths...")
-main(true_depths_dir, do_depth=False)
+main(true_depths_dir, do_depth=False,
+     title="Simulation Convergence Time vs Gain - True Depths",
+     file_prefix="true")
 print("\n\n")
+
+#------------------------------------------------------#
+#------------------------------------------------------#
+#------------------------------------------------------#
+
+# --- Email details ---
+sender_email = "***"
+receiver_email = "***"
+app_password = "***"
+
+with open("email.txt", 'r') as f:
+    text = f.read().splitlines()
+    sender_email = text[0]
+    receiver_email = text[0]
+    app_password = text[1]
+
+subject = "ROB501 A4 Part 4 Simulation Results"
+body = "See attached files for results.\n"
+
+# --- Create the email ---
+msg = EmailMessage()
+msg["From"] = sender_email
+msg["To"] = receiver_email
+msg["Subject"] = subject
+msg.set_content(body)
+
+# --- Attach files ---
+for filename in os.listdir(est_depths_dir):
+    filepath = os.path.join(est_depths_dir, filename)
+    if os.path.isfile(filepath):  # Ignore subfolders
+        with open(filepath, "rb") as f:
+            file_data = f.read()
+            msg.add_attachment(
+                file_data,
+                maintype="application",
+                subtype="octet-stream",
+                filename=filename
+            )
+
+for filename in os.listdir(true_depths_dir):
+    filepath = os.path.join(true_depths_dir, filename)
+    if os.path.isfile(filepath):  # Ignore subfolders
+        with open(filepath, "rb") as f:
+            file_data = f.read()
+            msg.add_attachment(
+                file_data,
+                maintype="application",
+                subtype="octet-stream",
+                filename=filename
+            )
+
+# --- Send via SMTP ---
+# For Gmail, you’ll need an App Password (not your normal password)
+with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+    smtp.login(sender_email, app_password)
+    smtp.send_message(msg)
+
+print("Email sent successfully!")
+
 
