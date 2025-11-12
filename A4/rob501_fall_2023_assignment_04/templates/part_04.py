@@ -75,11 +75,15 @@ print(f"\n\nTesting gains from {start} to {stop}, at intervals of {interval}.\n\
 def main(dump_dir, do_depth, title, file_prefix):
     delta_t = np.zeros(len(gain_range))
     for i,gain in enumerate(gain_range):
-        sim_start = time.time()
-        ibvs_simulation(Twc_init,Twc_last,pts,K,gain,do_depth=do_depth)
-        sim_end = time.time()
-        delta_t[i] = sim_end - sim_start
-        print(f"gain: {gain:.2}\tsim time: {delta_t[i]:.6}s")
+        try:
+            sim_start = time.time()
+            ibvs_simulation(Twc_init,Twc_last,pts,K,gain,do_depth=do_depth)
+            sim_end = time.time()
+            delta_t[i] = sim_end - sim_start
+            print(f"gain: {gain:.2}\tsim time: {delta_t[i]:.6}s")
+        except Exception as e:
+            delta_t[i] = np.inf
+            print(f"gain: {gain:.2}\tcomputational error: {e}")
 
     plt.clf()
     plt.plot(gain_range,delta_t)
