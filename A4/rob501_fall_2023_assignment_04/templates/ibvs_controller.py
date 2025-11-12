@@ -36,13 +36,10 @@ def ibvs_controller(K, pts_des, pts_obs, zs, gain):
         J[2*i:2*i+2,:] = ibvs_jacobian(K,pts_obs[:,i].reshape(-1,1),zs[i])
 
     # get proportional controller from equation from Corke text
-    try:
-        J_pseudo_inv = inv(J.T @ J) @ J.T
-        error = pts_des - pts_obs
-        error = error.flatten(order='F').reshape(-1,1) # convert to column vector
-        v = gain * J_pseudo_inv @ error
-    except:
-        v = np.zeros((6,1)) # inverse not computable...
+    J_pseudo_inv = inv(J.T @ J) @ J.T
+    error = pts_des - pts_obs
+    error = error.flatten(order='F').reshape(-1,1) # convert to column vector
+    v = gain * J_pseudo_inv @ error
 
     #------------------
 
