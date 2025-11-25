@@ -89,9 +89,9 @@ if __name__ == "__main__":
     Uncomment section to get a summary of the network (requires torchsummary to be installed):
         to install: pip install torchsummary
     '''
-    #from torchsummary import summary
-    #inputs = torch.zeros((1,3,68,224))
-    #summary(cnn, input_size=(3, 68, 224))
+    from torchsummary import summary
+    inputs = torch.zeros((1,3,68,224))
+    summary(cnn, input_size=(3, 68, 224))
     
     '''
     Training procedure
