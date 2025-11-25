@@ -23,7 +23,20 @@ class CNN(torch.nn.Module):
         self.conv1 = torch.nn.Conv2d(3, 16, stride=4, kernel_size=(9,9)) # 3 input channels, 16 output channels
         self.pool1 = torch.nn.MaxPool2d((3,3),stride=3)
         self.relu = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(16,num_bins, kernel_size=(5,18))
+
+        # improvement:
+        #   update kernel size, not final layer anymore
+        #   change number of output channels to 16
+        #   output after this now (3,16)
+        self.conv2 = torch.nn.Conv2d(16,16, kernel_size=(3,3))
+
+        # improvement: add more layers
+        self.pool2 = torch.nn.MaxPool2d((3,3),stride=1)
+        self.conv3 = torch.nn.Conv2d(16,num_bins, kernel_size=(1,14)) # new final layer
+
+        # improvement: batch normalization
+        #   apply after each conv layer except the last
+        self.batchNorm = torch.nn.BatchNorm2d(16)
 
         if use_cuda_if_available and torch.cuda.is_available():
             self = self.cuda()
@@ -32,9 +45,21 @@ class CNN(torch.nn.Module):
     def forward(self, x):
         
         x = self.conv1(x)
+
+        # improvement: apply batch normalization
+        # x = self.batchNorm(x)
+        
         x = self.pool1(x)
         x = self.relu(x)
         x = self.conv2(x)
+
+        # improvement: apply batch normalization
+        # x = self.batchNorm(x)
+
+        # improvement: include new layers
+        x = self.pool2(x)
+        x = self.conv3(x)
+
         
         x = x.squeeze() # (Batch_size x num_bins x 1 x 1) to (Batch_size x num_bins)
 
@@ -63,6 +88,12 @@ class dataloader(torch.utils.data.Dataset):
 
     def normalize_to_zero_mean(self):
         #---FILL ME IN-----
+        # improvement: set input data to zero-mean
+        # print(self.images.shape)
+        # 3 layers for rgb i think
+        for i in range(0,3):
+            # ... selects all elements of that axis
+            self.images[:,i,...] = self.images[:,i,...] - np.mean(self.images[:,i,...])
 
         #------------------
         pass
@@ -93,6 +124,7 @@ if __name__ == "__main__":
     from torchsummary import summary
     inputs = torch.zeros((1,3,68,224))
     summary(cnn, input_size=(3, 68, 224))
+    # exit()
     
     '''
     Training procedure
@@ -112,10 +144,10 @@ if __name__ == "__main__":
     best_err = 1
     
     ### Iterate through the data for the desired number of epochs
-    # num_epochs = 20 # baseline is 20
-    for epoch in range(0,20):
+    num_epochs = 20 # baseline is 20
+    for epoch in range(0,num_epochs):
         for mode in ['train', 'val']:    #iterate 
-            print("Starting {} epoch {}".format(mode, epoch))
+            print("\n\nStarting {} epoch {}".format(mode, epoch))
             epoch_loss=0
             top1_incorrect = 0
             top5_incorrect = 0
