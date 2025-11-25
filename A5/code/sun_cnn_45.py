@@ -84,6 +84,7 @@ if __name__ == "__main__":
     bin_edges = np.arange(-180,180+1,binsize)
     num_bins = bin_edges.shape[0] - 1
     cnn = CNN(num_bins) #Initialize our CNN Class
+    print("Initialized CNN with {} bins".format(num_bins))
     
     '''
     Uncomment section to get a summary of the network (requires torchsummary to be installed):
@@ -111,20 +112,27 @@ if __name__ == "__main__":
     best_err = 1
     
     ### Iterate through the data for the desired number of epochs
+    # num_epochs = 20 # baseline is 20
     for epoch in range(0,20):
         for mode in ['train', 'val']:    #iterate 
+            print("Starting {} epoch {}".format(mode, epoch))
             epoch_loss=0
             top1_incorrect = 0
             top5_incorrect = 0
             if mode == 'train':
+                print("training mode")
                 cnn.train(True)    # Set model to training mode
             else:
+                print("evaluation mode")
                 cnn.train(False)    # Set model to Evaluation mode
                 cnn.eval()
             
+            print("Processing {} data...".format(mode))
             dset_size = dset_loaders[mode].dataset.__len__()
             for image, target in dset_loaders[mode]:    #Iterate through all data (each iteration loads a minibatch)
                 
+                print("running {} epoch {}".format(mode, epoch), end='\r')
+
                 # Cast to types and Load GPU if desired and available
                 if use_cuda_if_available and torch.cuda.is_available():
                     image = image.cuda().type(torch.cuda.FloatTensor)
