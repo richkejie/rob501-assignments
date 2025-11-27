@@ -21,55 +21,47 @@ class CNN(torch.nn.Module):
         super(CNN, self).__init__()
         
         ### Initialize the various Network Layers
-        self.conv1 = torch.nn.Conv2d(3, 16, stride=4, kernel_size=(9,9), bias=False) # 3 input channels, 16 output channels
+        self.conv1 = torch.nn.Conv2d(3, 16, stride=4, kernel_size=(9,9), bias=False)
         self.pool1 = torch.nn.MaxPool2d((3,3),stride=3)
         self.relu = torch.nn.ReLU()
-
-        # improvement:
-        #   update kernel size, not final layer anymore
-        #   change number of output channels to 16
-        #   output after this now (3,16)
-        self.conv2 = torch.nn.Conv2d(16,16, kernel_size=(2,2), bias=True)
-
-        # improvement: add more layers
-        self.pool2 = torch.nn.MaxPool2d((3,3),stride=1)
-        self.conv3 = torch.nn.Conv2d(16,num_bins, kernel_size=(2,15)) # new final layer
-
-        # improvement: batch normalization
-        #   apply after 1st conv layer
-        self.batchNorm = torch.nn.BatchNorm2d(16)
-
-        # improvement: dropout for regularization
-        #   apply after relu layers
-        self.dropout = torch.nn.Dropout2d(p=0.3)
+        # make network even deeper than in sun_cnn_45
+        # trying bunch of random things...using tips from instruction handout
+        # honestly, don't know why this works...
+        # change to output 32 to allow more room for learning
+        self.conv2 = torch.nn.Conv2d(16,32, stride=1, kernel_size=(5,5), padding=2, bias=False) 
+        self.pool2 = torch.nn.MaxPool2d((3,3),stride=1) 
+        self.conv3 = torch.nn.Conv2d(32,32, stride=1, kernel_size=(3,3), padding=1, bias=True)
+        self.pool3 = torch.nn.MaxPool2d((2,2),stride=1) 
+        self.conv4 = torch.nn.Conv2d(32,num_bins, kernel_size=(2,15)) # final layer
+        self.batchNorm1 = torch.nn.BatchNorm2d(16) # after conv1
+        self.batchNorm2 = torch.nn.BatchNorm2d(32) # after conv2
+        self.dropout = torch.nn.Dropout2d(p=0.3) # after relu layers
 
         if use_cuda_if_available and torch.cuda.is_available():
-            print('using cuda..')
             self = self.cuda()
 
     ###Define what the forward pass through the network is
     def forward(self, x):
         
         x = self.conv1(x)
-
-        # improvement: apply batch normalization
-        x = self.batchNorm(x)
-        
+        x = self.batchNorm1(x)
         x = self.pool1(x)
         x = self.relu(x)
-
-        # improvement: apply dropout
         x = self.dropout(x)
 
         x = self.conv2(x)
-
-        # improvement: include new layers
+        x = self.batchNorm2(x)
         x = self.pool2(x)
-        x = self.relu(x) # add another relu layer
-        x = self.dropout(x) # dropout again
-        x = self.conv3(x) # final layer
+        x = self.relu(x)
+        x = self.dropout(x)
 
-        
+        x = self.conv3(x)
+        x = self.pool3(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        x = self.conv4(x)
+
         x = x.squeeze() # (Batch_size x num_bins x 1 x 1) to (Batch_size x num_bins)
 
         return x
@@ -120,7 +112,7 @@ if __name__ == "__main__":
     '''
     Initialize the Network
     '''
-    binsize=45 #degrees **set this to 20 for part 2**
+    binsize=20 #degrees **set this to 20 for part 2**
     bin_edges = np.arange(-180,180+1,binsize)
     num_bins = bin_edges.shape[0] - 1
     cnn = CNN(num_bins) #Initialize our CNN Class
